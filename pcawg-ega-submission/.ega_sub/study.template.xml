@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<STUDY_SET xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ftp://ftp.sra.ebi.ac.uk/meta/xsd/sra_1_5/SRA.study.xsd">
+   <STUDY alias="" center_name="">
+      <DESCRIPTOR>
+         <STUDY_TITLE></STUDY_TITLE>
+         <STUDY_TYPE existing_study_type="" />
+         <STUDY_ABSTRACT></STUDY_ABSTRACT>
+      </DESCRIPTOR>
+      <STUDY_ATTRIBUTES>
+         <STUDY_ATTRIBUTE>
+            <TAG></TAG>
+            <VALUE></VALUE>
+         </STUDY_ATTRIBUTE>
+      </STUDY_ATTRIBUTES>
+   </STUDY>
+</STUDY_SET>

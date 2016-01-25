@@ -1,0 +1,20 @@
+# YAML for study
+
+study_alias: PCAWG
+
+study_title: ICGC PanCancer Analysis of Whole Genomes
+study_type: Cancer Genomics
+study_abstract: >
+  The Pancancer Analysis of Whole Genomes (PCAWG) study is an international
+  collaboration to identify common patterns of mutation in more than 2,800
+  cancer whole genomes from the International Cancer Genome Consortium.
+  Building upon previous work which examined cancer coding regions (Cancer
+  Genome Atlas Research Network, The Cancer Genome Atlas Pan-Cancer analysis
+  project, Nat. Genet. 2013 45:1113), this project is exploring the nature
+  and consequences of somatic and germline variations in both coding and
+  non-coding regions, with specific emphasis on cis-regulatory sites,
+  non-coding RNAs, and large-scale structural alterations.
+
+study_attr:
+  - tag: Consortium
+    value: International Cancer Genome Consortium (ICGC)

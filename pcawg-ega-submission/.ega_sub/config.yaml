@@ -1,0 +1,9 @@
+
+submission_id: EGAB00000001029
+centre_name: ICGC
+
+ftp_server: ftp.ega.ebi.ac.uk
+
+metadata_endpoint_test: "https://www-test.ebi.ac.uk/ena/submit/drop-box/submit/?auth="
+metadata_endpoint_prod: "https://www.ebi.ac.uk/ena/submit/drop-box/submit/?auth="
+
