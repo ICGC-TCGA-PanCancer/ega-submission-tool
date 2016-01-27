@@ -1,67 +1,38 @@
+import os
 import click
 import util
+from prepare_xml import *
+from submit_xml import *
 
 
 def initialize_workspace(ctx):
+    ctx.obj['CURRENT_DIR'] = os.getcwd()
+    ctx.obj['IS_TEST_PROJ'] = None
     ctx.obj['WORKSPLACE_PATH'] = util.find_workspace_root()
     if not ctx.obj['WORKSPLACE_PATH']:
         click.echo('Error: not in an EGA submission workspace!')
         ctx.abort()
 
-    click.echo('Workspace: %s' % ctx.obj['WORKSPLACE_PATH'])
+    # for debugging only
+    #click.echo('Workspace: %s' % ctx.obj['WORKSPLACE_PATH'])
 
     # read the settings
+    ctx.obj['SETTINGS'] = util.get_settings(ctx.obj['WORKSPLACE_PATH'])
+    if not ctx.obj['SETTINGS']:
+        click.echo('Error: unable to read config file, or config file invalid!')
+        ctx.abort()
 
-    # figure out the current dir, e.g., study, sample or analysis
+    # figure out the current dir type, e.g., study, sample or analysis
+    ctx.obj['CURRENT_DIR_TYPE'] = util.get_current_dir_type(ctx)
+    if not ctx.obj['CURRENT_DIR_TYPE']:
+        click.echo('Error: the current working directory does not associate with any known EGA object type')
+        ctx.abort()
 
-    # figure out the current project, e.g., CLLE-ES
-
-    # figure out whether its a test project
-
-
-def prepare_study(ctx):
-    click.echo('Sorry, not implemented yet.')
-    ctx.abort()
-
-
-def prepare_sample(ctx):
-    click.echo('Sorry, not implemented yet.')
-    ctx.abort()
-
-
-def prepare_analysis(ctx):
-    click.echo('Sorry, not implemented yet.')
-    ctx.abort()
-
-
-def prepare_dataset(ctx):
-    click.echo('Sorry, not implemented yet.')
-    ctx.abort()
-
-
-def submit_study(ctx):
-    click.echo('Sorry, not implemented yet.')
-    ctx.abort()
-
-
-def submit_sample(ctx):
-    click.echo('Sorry, not implemented yet.')
-    ctx.abort()
-
-
-def submit_analysis(ctx):
-    click.echo('Sorry, not implemented yet.')
-    ctx.abort()
-
-
-def submit_dataset(ctx):
-    click.echo('Sorry, not implemented yet.')
-    ctx.abort()
+    # for debugging only
+    #click.echo(ctx.obj)
 
 
 def prepare(ctx, ega_type):
-    #click.echo(repr(ctx.obj))
-
     if ega_type == 'study':
         prepare_study(ctx)
     elif ega_type == 'sample':
@@ -78,8 +49,6 @@ def prepare(ctx, ega_type):
 
 
 def submit(ctx, ega_type):
-    #click.echo(repr(ctx.obj))
-
     if ega_type == 'study':
         submit_study(ctx)
     elif ega_type == 'sample':
