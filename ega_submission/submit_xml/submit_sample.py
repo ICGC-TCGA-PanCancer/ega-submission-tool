@@ -1,5 +1,4 @@
-import click
+from submit import submit_any
 
 def submit_sample(ctx, source):
-    click.echo('Sorry, not implemented yet.')
-    ctx.abort()
+    submit_any(ctx, 'sample', source)
