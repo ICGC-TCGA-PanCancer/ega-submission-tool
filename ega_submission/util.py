@@ -1,6 +1,9 @@
 import os
 import re
 import yaml
+import click
+import xmltodict
+import subprocess
 
 
 def find_workspace_root(cwd=os.getcwd()):
@@ -38,7 +41,7 @@ def get_settings(wspath):
 
 
 def get_current_dir_type(ctx):
-    workplace = ctx.obj['WORKSPLACE_PATH']
+    workplace = ctx.obj['WORKSPACE_PATH']
     current_dir = ctx.obj['CURRENT_DIR']
     if os.path.join(workplace, 'study') == current_dir:
         return 'study'
@@ -59,3 +62,60 @@ def get_current_dir_type(ctx):
             return None
 
     return None
+
+
+def get_template(template_file):
+    with open (template_file, 'r') as x: xml_str = x.read()
+    return xmltodict.parse(xml_str)
+
+
+def file_pattern_exist(dirname, pattern):
+    files = [f for f in os.listdir(dirname) if os.path.isfile(f)]
+    for f in files:
+        if re.match(pattern, f): return True
+
+    return False
+
+
+def submit(ctx, submission_file, metadata_xmls):
+    ega_obj_type = 'SUBMISSION'
+    files = '-F "%s=@%s" ' % (ega_obj_type, submission_file)
+
+    ega_obj_type = ctx.obj['CURRENT_DIR_TYPE'].upper()
+    if ega_obj_type.startswith('ANALYSIS'): ega_obj_type = 'ANALYSIS'
+
+    for f in metadata_xmls:
+        files = files + '-F "%s=@%s" ' % (ega_obj_type, f)
+
+    if ctx.obj['IS_TEST']:
+        api_endpoint = ctx.obj['SETTINGS']['metadata_endpoint_test'] + ctx.obj['AUTH']
+    else:
+        api_endpoint = ctx.obj['SETTINGS']['metadata_endpoint_prod'] + ctx.obj['AUTH']
+
+    shell_cmd = 'curl -k %s "%s"' % (files, api_endpoint)
+
+    process = subprocess.Popen(
+            shell_cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+
+    out, err = process.communicate()
+
+    if process.returncode:
+        # error happened
+        click.echo('Unable to download file from cloud.\nError message: {}'.format(err))
+        ctx.abort()
+    elif 'Login failed' in out:
+        click.echo('Login failed!')
+        ctx.abort()
+    else:
+        receipt = xmltodict.unparse(xmltodict.parse(out), pretty=True)
+        if 'success="falsed"' in receipt:
+            click.echo('Failed, see below for details:\n%s' % receipt)
+        else:
+            receipt_file = submission_file.replace('.submission-', '.receipt-')
+            with open(receipt_file, 'w') as w: w.write(receipt)
+            click.echo('Succeeded with response:\n%s' % receipt)
+

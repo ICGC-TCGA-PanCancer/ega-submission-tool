@@ -8,16 +8,16 @@ from submit_xml import *
 def initialize_workspace(ctx):
     ctx.obj['CURRENT_DIR'] = os.getcwd()
     ctx.obj['IS_TEST_PROJ'] = None
-    ctx.obj['WORKSPLACE_PATH'] = util.find_workspace_root()
-    if not ctx.obj['WORKSPLACE_PATH']:
+    ctx.obj['WORKSPACE_PATH'] = util.find_workspace_root()
+    if not ctx.obj['WORKSPACE_PATH']:
         click.echo('Error: not in an EGA submission workspace!')
         ctx.abort()
 
     # for debugging only
-    #click.echo('Workspace: %s' % ctx.obj['WORKSPLACE_PATH'])
+    #click.echo('Workspace: %s' % ctx.obj['WORKSPACE_PATH'])
 
     # read the settings
-    ctx.obj['SETTINGS'] = util.get_settings(ctx.obj['WORKSPLACE_PATH'])
+    ctx.obj['SETTINGS'] = util.get_settings(ctx.obj['WORKSPACE_PATH'])
     if not ctx.obj['SETTINGS']:
         click.echo('Error: unable to read config file, or config file invalid!')
         ctx.abort()
@@ -32,34 +32,36 @@ def initialize_workspace(ctx):
     #click.echo(ctx.obj)
 
 
-def prepare(ctx, ega_type):
+def prepare(ctx, ega_type, source):
+    #click.echo(ctx.obj)
     if ega_type == 'study':
-        prepare_study(ctx)
+        prepare_study(ctx, source)
     elif ega_type == 'sample':
-        prepare_sample(ctx)
+        prepare_sample(ctx, source)
     elif ega_type == 'analysis':
-        prepare_analysis(ctx)
+        prepare_analysis(ctx, source)
     elif ega_type == 'dataset':
-        prepare_dataset(ctx)
+        prepare_dataset(ctx, source)
     else:
         click.echo('Unknown object type: %s' % ega_type)
         ctx.abort()
 
-    click.echo( "Prepared %s" % ega_type )
+    click.echo( 'Prepared %s' % ega_type )
 
 
-def submit(ctx, ega_type):
+def submit(ctx, ega_type, source):
+    #click.echo(ctx.obj)
     if ega_type == 'study':
-        submit_study(ctx)
+        submit_study(ctx, source)
     elif ega_type == 'sample':
-        submit_sample(ctx)
+        submit_sample(ctx, source)
     elif ega_type == 'analysis':
-        submit_analysis(ctx)
+        submit_analysis(ctx, source)
     elif ega_type == 'dataset':
-        submit_dataset(ctx)
+        submit_dataset(ctx, source)
     else:
         click.echo('Unknown object type: %s' % ega_type)
         ctx.abort()
 
-    click.echo( "Submitted %s" % ega_type )
+    click.echo( 'Submitted %s' % ega_type )
 
