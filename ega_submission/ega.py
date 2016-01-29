@@ -46,8 +46,6 @@ def prepare(ctx, ega_type, source):
         click.echo('Unknown object type: %s' % ega_type)
         ctx.abort()
 
-    click.echo( 'Prepared %s' % ega_type )
-
 
 def submit(ctx, ega_type, source):
     #click.echo(ctx.obj)
@@ -62,6 +60,4 @@ def submit(ctx, ega_type, source):
     else:
         click.echo('Unknown object type: %s' % ega_type)
         ctx.abort()
-
-    click.echo( 'Submitted %s' % ega_type )
 

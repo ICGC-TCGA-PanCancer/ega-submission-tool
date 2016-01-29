@@ -54,7 +54,7 @@ def prepare_sample(ctx, source):
     #click.echo(xmltodict.unparse(sample_obj, pretty=True))
     out_file = re.sub(r'\.tsv$', '.xml', source)
     if os.path.isfile(out_file) and not ctx.obj.get('FORCE'):
-        click.echo('Error: this study source file has been converted to study XML before, will not overwrite without "--force" option.')
+        click.echo('Error: this source file has been converted to EGA XML before, will not overwrite without "--force" option.')
         ctx.abort()
 
     with open(out_file, 'w') as w: w.write(xmltodict.unparse(sample_obj, pretty=True))

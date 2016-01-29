@@ -1,9 +1,12 @@
 import os
 import re
 import yaml
+import glob
+import csv
 import click
 import xmltodict
 import subprocess
+import ftplib
 
 
 def find_workspace_root(cwd=os.getcwd()):
@@ -52,6 +55,7 @@ def get_current_dir_type(ctx):
         ctx.obj['PROJECT'] = m.group(1)
         if ctx.obj['PROJECT'].startswith('TEST'):
             ctx.obj['IS_TEST_PROJ'] = True
+            ctx.obj['IS_TEST'] = True  # work on TEST project is always a test
         else:
             ctx.obj['IS_TEST_PROJ'] = False
 
@@ -75,6 +79,42 @@ def file_pattern_exist(dirname, pattern):
         if re.match(pattern, f): return True
 
     return False
+
+
+def load_samples(sample_lookup):
+    sample_files = os.path.join('..', 'sample', 'sample.*.tsv')
+    for f in glob.glob(sample_files):
+        with open(f, 'r') as s:
+            reader = csv.DictReader(s, delimiter='\t')
+            for sample_info in reader:
+                sample_lookup[sample_info['aliquot_id/sample_uuid']] = \
+                    sample_info['icgc_sample_id']
+
+
+def ftp_files(path, ctx):
+    host = ctx.obj['SETTINGS']['ftp_server']
+    _, user, passwd = ctx.obj['AUTH'].split('%20') if len(ctx.obj['AUTH'].split('%20')) == 3 else ('', '', '')
+
+    ftp = ftplib.FTP(host, user, passwd)
+
+    files = []
+    try:
+        files = ftp.nlst(path)
+    except ftplib.error_perm, resp:
+        click.echo('Error: unable to connect to FTP server.')
+        ctx.abort()
+
+    return files
+
+
+def report_missing_file(missed_files, ctx):
+    missed_file_dir = os.path.join(ctx.obj['WORKSPACE_PATH'], 'file_info', 'missed_files')
+    for f in missed_files:
+        dirname, filename = f.split('/')
+        if not os.path.isdir(os.path.join(missed_file_dir, dirname)):
+            os.makedirs(os.path.join(missed_file_dir, dirname))
+
+        open(os.path.join(missed_file_dir, f), 'a').close()
 
 
 def submit(ctx, submission_file, metadata_xmls):
@@ -111,11 +151,19 @@ def submit(ctx, submission_file, metadata_xmls):
         click.echo('Login failed!')
         ctx.abort()
     else:
-        receipt = xmltodict.unparse(xmltodict.parse(out), pretty=True)
-        if 'success="falsed"' in receipt:
-            click.echo('Failed, see below for details:\n%s' % receipt)
-        else:
-            receipt_file = submission_file.replace('.submission-', '.receipt-')
-            with open(receipt_file, 'w') as w: w.write(receipt)
-            click.echo('Succeeded with response:\n%s' % receipt)
+        failed = False
+        try:
+            receipt_obj = xmltodict.parse(out)
+            receipt = xmltodict.unparse(receipt_obj, pretty=True)
+            if receipt_obj['RECEIPT']['@success'].lower() == 'true':
+                receipt_file = submission_file.replace('.submission-', '.receipt-')
+                with open(receipt_file, 'w') as w: w.write(receipt)
+                click.echo('Succeeded with response:\n%s' % receipt)
+            else:
+                click.echo('Failed, see below for details:\n%s' % receipt)
+                failed = True  # can't call abort() here, must flag it instead
+        except Exception, e:  # if the output is not an XML, it's failed
+            click.echo('Failed, unknown response type, see below for details:\n%s\n%s' % (out, e))
+            ctx.abort()
 
+        if failed: ctx.abort()

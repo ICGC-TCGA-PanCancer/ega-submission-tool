@@ -14,6 +14,7 @@ def main(ctx, auth, force, debug):
     ctx.obj['AUTH'] = urllib.quote(auth, safe='')
     ctx.obj['FORCE'] = force
     ctx.obj['DEBUG'] = debug
+    ctx.obj['IS_TEST'] = False
     if ctx.obj['DEBUG']: click.echo('Debug is on.')
 
     ega.initialize_workspace(ctx)
@@ -29,8 +30,6 @@ def prepare(ctx, ega_type, source):
             (ctx.obj['CURRENT_DIR_TYPE'].startswith('analysis_') and ega_type == 'dataset')):
         click.echo('Error: please make sure you are in %s directory.' % ega_type)
         ctx.abort()
-
-    click.echo('This is to prepare for %s.' % ega_type)
 
     ega.prepare(ctx, ega_type, source)
 
@@ -56,9 +55,7 @@ def submit(ctx, test, ega_type, source):
         click.echo('Error: please make sure you are in %s directory.' % ega_type)
         ctx.abort()
 
-    click.echo('This is to submit %s.' % ega_type)
-
-    ctx.obj['IS_TEST'] = test
+    if test: ctx.obj['IS_TEST'] = True
 
     ega.submit(ctx, ega_type, source)
 
