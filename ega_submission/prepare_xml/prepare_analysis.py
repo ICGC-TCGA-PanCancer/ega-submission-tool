@@ -5,7 +5,7 @@ import xmltodict
 import json
 import copy
 from build_analysis import build_alignment_analysis, build_variation_analysis
-from ..util import get_template, load_samples, report_missing_file
+from ..util import get_template, load_samples, load_file_info, report_missing_file
 
 
 def prepare_analysis(ctx, source):
@@ -31,6 +31,7 @@ def prepare_analysis(ctx, source):
     analysis_template_obj = get_template(template_file)
 
     sample_lookup = {}
+    file_info = {}
 
     # scan for GNOS analysis in the GNOS_xml folder
     fc_total = 0
@@ -65,17 +66,19 @@ def prepare_analysis(ctx, source):
             click.echo('Error: no sample info available.')
             ctx.abort()
 
+        if not file_info: load_file_info(file_info, ctx)
+        if not file_info:
+            click.echo('Error: no staged file info (md5sum etc) available.')
+            ctx.abort()
+
         if ctx.obj['CURRENT_DIR_TYPE'].startswith('analysis_alignment.'):
-            missed_files = build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, sample_lookup, ctx)
+            rev = build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, sample_lookup, file_info, ctx)
         elif ctx.obj['CURRENT_DIR_TYPE'].startswith('analysis_variation.'):
-            missed_files = build_variation_analysis(analysis_obj, analysis_info, gnos_analysis_id, sample_lookup, ctx)
+            rev = build_variation_analysis(analysis_obj, analysis_info, gnos_analysis_id, sample_lookup, file_info, ctx)
 
         #click.echo(json.dumps(analysis_obj, indent=2))
         #click.echo(xmltodict.unparse(analysis_obj, pretty=True))
-        if missed_files:
-            click.echo('Missing files on FTP for: %s' % file_with_path)
-            report_missing_file(missed_files, ctx)
-            continue
+        if not rev: continue
 
         # write the flag file to mark its been processed
         with open(file_with_path + '.processed', 'w') as w: w.write('')

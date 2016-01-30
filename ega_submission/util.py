@@ -81,16 +81,6 @@ def file_pattern_exist(dirname, pattern):
     return False
 
 
-def load_samples(sample_lookup):
-    sample_files = os.path.join('..', 'sample', 'sample.*.tsv')
-    for f in glob.glob(sample_files):
-        with open(f, 'r') as s:
-            reader = csv.DictReader(s, delimiter='\t')
-            for sample_info in reader:
-                sample_lookup[sample_info['aliquot_id/sample_uuid']] = \
-                    sample_info['icgc_sample_id']
-
-
 def ftp_files(path, ctx):
     host = ctx.obj['SETTINGS']['ftp_server']
     _, user, passwd = ctx.obj['AUTH'].split('%20') if len(ctx.obj['AUTH'].split('%20')) == 3 else ('', '', '')
@@ -107,14 +97,49 @@ def ftp_files(path, ctx):
     return files
 
 
+def load_samples(sample_lookup):
+    sample_files = os.path.join('..', 'sample', 'sample.*.tsv')
+    for f in glob.glob(sample_files):
+        with open(f, 'r') as s:
+            reader = csv.DictReader(s, delimiter='\t')
+            for sample_info in reader:
+                sample_lookup[sample_info['aliquot_id/sample_uuid']] = \
+                    sample_info['icgc_sample_id']
+
+def load_file_info(file_info, ctx):
+    file_info_dir = '_test_file_info' if ctx.obj['IS_TEST'] else 'file_info'
+
+    staged_file_list = os.path.join(ctx.obj['WORKSPACE_PATH'], file_info_dir, 'staged_files.tsv')
+    with open(staged_file_list, 'r') as f:
+        reader = csv.DictReader(f, delimiter='\t')
+        for finfo in reader:
+            file_info[finfo['filename']] = {
+                'checksum': finfo['checksum'],
+                'unencrypted_checksum': finfo['unencrypted_checksum']
+            }
+
+
 def report_missing_file(missed_files, ctx):
-    missed_file_dir = os.path.join(ctx.obj['WORKSPACE_PATH'], 'file_info', 'missed_files')
+    file_info_dir = '_test_file_info' if ctx.obj['IS_TEST'] else 'file_info'
+
+    missed_file_dir = os.path.join(ctx.obj['WORKSPACE_PATH'], file_info_dir, 'missed_files')
     for f in missed_files:
         dirname, filename = f.split('/')
         if not os.path.isdir(os.path.join(missed_file_dir, dirname)):
             os.makedirs(os.path.join(missed_file_dir, dirname))
 
         open(os.path.join(missed_file_dir, f), 'a').close()
+
+
+def report_missing_file_info(file_with_path, ctx):
+    file_info_dir = '_test_file_info' if ctx.obj['IS_TEST'] else 'file_info'
+
+    info_missing_dir = os.path.join(ctx.obj['WORKSPACE_PATH'], file_info_dir, 'file_info_missing')
+    dirname, filename = file_with_path.split('/')
+    if not os.path.isdir(os.path.join(info_missing_dir, dirname)):
+        os.makedirs(os.path.join(info_missing_dir, dirname))
+
+    open(os.path.join(info_missing_dir, file_with_path), 'a').close()
 
 
 def submit(ctx, submission_file, metadata_xmls):
