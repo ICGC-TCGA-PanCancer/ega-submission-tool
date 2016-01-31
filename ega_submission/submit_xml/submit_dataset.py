@@ -1,5 +1,4 @@
-import click
+from submit_single import submit_single
 
 def submit_dataset(ctx, source):
-    click.echo('Sorry, not implemented yet.')
-    ctx.abort()
+    submit_single(ctx, 'dataset', source)

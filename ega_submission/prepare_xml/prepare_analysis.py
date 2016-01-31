@@ -85,5 +85,4 @@ def prepare_analysis(ctx, source):
         out_file = os.path.join('analysis', re.sub(r'\.GNOS\.xml$', '.xml', f))
         with open(out_file, 'w') as w: w.write(xmltodict.unparse(analysis_obj, pretty=True))
 
-
     click.echo('Processed %i out of %i input GNOS xmls' % (fc_processed, fc_total))

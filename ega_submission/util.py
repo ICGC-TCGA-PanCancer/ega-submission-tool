@@ -64,7 +64,7 @@ def get_current_dir_type(ctx):
             ctx.obj['IS_TEST_PROJ'] = False
 
         if m.group(2) == 'sample' or \
-            not set([m.group(2)]) - set(ctx.obj.get('SETTINGS', {}).get('analysis_types')):
+            not set([m.group(2)]) - set(ctx.obj.get('SETTINGS', {}).get('analysis_types').keys()):
             return m.group(2)
         else:
             return None
