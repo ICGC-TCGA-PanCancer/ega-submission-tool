@@ -10,11 +10,11 @@ from ..util import get_template
 def prepare_study(ctx, source):
     regex = '^study\.[_0-9a-zA-Z\-]+\.yaml$'
     if not re.match(re.compile(regex), source):
-        click.echo('Error: specified source file does not match naming convention: %s' % regex)
+        click.echo('Error: specified source file does not match naming convention: %s' % regex, err=True)
         ctx.abort()
 
     if not os.path.isfile(source):
-        click.echo('Error: specified source file does not exist.')
+        click.echo('Error: specified source file does not exist.', err=True)
         ctx.abort()
 
     with open(source, 'r') as s: study_info = yaml.load(s)
@@ -33,20 +33,18 @@ def prepare_study(ctx, source):
         study_obj['STUDY_SET']['STUDY']['STUDY_ATTRIBUTES']['STUDY_ATTRIBUTE']['VALUE'] = study_info['study_attr'][0]['value']
 
     except KeyError, e:
-        click.echo('Error: KeyError, %s' % str(e))
+        click.echo('Error: KeyError, %s' % str(e), err=True)
         ctx.abort()
     except IndexError, e:
-        click.echo('Error: IndexError, %s' % str(e))
+        click.echo('Error: IndexError, %s' % str(e), err=True)
         ctx.abort()
     except Exception, e:
-        click.echo('Error: %s' % str(e))
+        click.echo('Error: %s' % str(e), err=True)
         ctx.abort()
 
-    #click.echo(json.dumps(study_obj, indent=2))
-    #click.echo(xmltodict.unparse(study_obj, pretty=True))
     out_file = re.sub(r'\.yaml$', '.xml', source)
     if os.path.isfile(out_file) and not ctx.obj.get('FORCE'):
-        click.echo('Error: this source file has been converted to EGA XML before, will not overwrite without "--force" option.')
+        click.echo('Error: this source file has been converted to EGA XML before, will not overwrite without "--force" option.', err=True)
         ctx.abort()
 
     with open(out_file, 'w') as w: w.write(xmltodict.unparse(study_obj, pretty=True))

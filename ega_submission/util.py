@@ -4,9 +4,13 @@ import yaml
 import glob
 import csv
 import click
+import copy
 import xmltodict
 import subprocess
 import ftplib
+import calendar
+import time
+import uuid
 
 
 def find_workspace_root(cwd=os.getcwd()):
@@ -81,6 +85,34 @@ def file_pattern_exist(dirname, pattern):
     return False
 
 
+def prepare_submission(ctx, ega_type, objects_to_be_submitted):
+    # read submission template xml file
+    template_file = os.path.join(ctx.obj['WORKSPACE_PATH'], 'settings', 'submission.template.xml')
+    submission_obj = get_template(template_file)
+
+    epoch_time = str(int(calendar.timegm(time.gmtime())))
+    uuid_str = str(uuid.uuid4())
+    alias_parts = [epoch_time, uuid_str]
+    if ctx.obj['IS_TEST']: alias_parts.insert(0, 'test')
+    submission_alias = '_'.join(alias_parts)
+
+    try:
+        submission_obj['SUBMISSION_SET']['SUBMISSION']['@alias'] = submission_alias
+        actions = submission_obj['SUBMISSION_SET']['SUBMISSION']['ACTIONS']['ACTION']
+        action = actions.pop(0)  # remove the first placeholder action
+        source_file_pattern = re.compile('^' + ega_type + '\.' + '.+\.xml$')
+        for source in objects_to_be_submitted:
+            action['ADD']['@source'] = source if re.match(source_file_pattern, source) else '.'.join([ega_type, source, 'xml'])
+            action['ADD']['@schema'] = ega_type
+            actions.insert(0, copy.deepcopy(action))  # add action back in the first place
+
+    except Exception, e:
+        click.echo('Error: %s' % str(e), err=True)
+        ctx.abort()
+
+    return submission_obj
+
+
 def ftp_files(path, ctx):
     host = ctx.obj['SETTINGS']['ftp_server']
     _, user, passwd = ctx.obj['AUTH'].split('%20') if len(ctx.obj['AUTH'].split('%20')) == 3 else ('', '', '')
@@ -91,7 +123,7 @@ def ftp_files(path, ctx):
     try:
         files = ftp.nlst(path)
     except ftplib.error_perm, resp:
-        click.echo('Error: unable to connect to FTP server.')
+        click.echo('Error: unable to connect to FTP server.', err=True)
         ctx.abort()
 
     return files
@@ -158,7 +190,7 @@ def submit(ctx, submission_file, metadata_xmls):
         api_endpoint = ctx.obj['SETTINGS']['metadata_endpoint_prod'] + ctx.obj['AUTH']
 
     shell_cmd = 'curl -k %s "%s"' % (files, api_endpoint)
-
+    print shell_cmd
     process = subprocess.Popen(
             shell_cmd,
             shell=True,
@@ -170,10 +202,10 @@ def submit(ctx, submission_file, metadata_xmls):
 
     if process.returncode:
         # error happened
-        click.echo('Unable to download file from cloud.\nError message: {}'.format(err))
+        click.echo('Unable to communicate with FTP server, Error message: %s' % err, err=True)
         ctx.abort()
     elif 'Login failed' in out:
-        click.echo('Login failed!')
+        click.echo('Login failed!', err=True)
         ctx.abort()
     else:
         failed = False
@@ -185,10 +217,30 @@ def submit(ctx, submission_file, metadata_xmls):
                 with open(receipt_file, 'w') as w: w.write(receipt)
                 click.echo('Succeeded with response:\n%s' % receipt)
             else:
-                click.echo('Failed, see below for details:\n%s' % receipt)
+                click.echo('Failed, see below for details:\n%s' % receipt, err=True)
                 failed = True  # can't call abort() here, must flag it instead
         except Exception, e:  # if the output is not an XML, it's failed
-            click.echo('Failed, unknown response type, see below for details:\n%s\n%s' % (out, e))
+            click.echo('Failed, unknown response type, see below for details:\n%s\n%s' % (out, e), err=True)
             ctx.abort()
 
         if failed: ctx.abort()
+
+
+def get_submitted_items_from_receipt(filename, ega_type, identifier):
+    ega_type = ega_type.upper()
+    identifier = identifier.lower()
+    if not ega_type in ('SUBMISSION', 'STUDY', 'SAMPLE', 'ANALYSIS', 'DATASET'):
+        click.echo('Warning: unknown EGA type be extracted from EGA submisson receipt - %s' % ega_type, err=True)
+        return []
+    elif not identifier in ('@accession', '@alias'):
+        click.echo('Warning: unknown EGA type be extracted from EGA submisson receipt - %s' % ega_type, err=True)
+        return []
+
+    with open (filename, 'r') as x: xml_str = x.read()
+    receipt_obj = xmltodict.parse(xml_str)
+    items = receipt_obj.get('RECEIPT', {}).get(ega_type)
+    if items:
+        if not isinstance(items, list): items = [ copy.deepcopy(items) ]
+        return [i.get(identifier) for i in items]
+
+    return []

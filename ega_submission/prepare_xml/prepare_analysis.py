@@ -12,11 +12,11 @@ def prepare_analysis(ctx, source):
     source = source.rstrip('/')
     regex = '^GNOS_xml$'
     if not re.match(re.compile(regex), source):
-        click.echo('Error: specified source file does not match naming convention: %s' % regex)
+        click.echo('Error: specified source file does not match naming convention: %s' % regex, err=True)
         ctx.abort()
 
     if not os.path.isdir(source):
-        click.echo('Error: specified source file does not exist.')
+        click.echo('Error: specified source file does not exist.', err=True)
         ctx.abort()
 
     # read template xml file
@@ -25,7 +25,7 @@ def prepare_analysis(ctx, source):
     elif ctx.obj['CURRENT_DIR_TYPE'].startswith('analysis_variation.'):
         template_file = os.path.join(ctx.obj['WORKSPACE_PATH'], 'settings', 'analysis_variation.template.xml')
     else:
-        click.echo('Error: no template file found for this analysis type - %s' % ctx.obj['CURRENT_DIR_TYPE'])
+        click.echo('Error: no template file found for this analysis type - %s' % ctx.obj['CURRENT_DIR_TYPE'], err=True)
         ctx.abort()
 
     analysis_template_obj = get_template(template_file)
@@ -36,23 +36,23 @@ def prepare_analysis(ctx, source):
     # scan for GNOS analysis in the GNOS_xml folder
     fc_total = 0
     fc_processed = 0
+    # file name convention
+    pattern = re.compile('^analysis\.([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\.GNOS\.xml$')
     for f in os.listdir(source):
         file_with_path = os.path.join(source,f)
         if not os.path.isfile(file_with_path): continue
 
-        # file name convention
-        pattern = re.compile('^analysis\.([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\.GNOS\.xml$')
         m = re.match(pattern, f)
         if m and m.group(1):
             gnos_analysis_id = m.group(1)
         else:
-            if ctx.obj['DEBUG']: click.echo('Ingore file does not match naming pattern: %s', f)
+            if ctx.obj['DEBUG']: click.echo('Ingore file does not match naming pattern: %s' % f, err=True)
             continue
 
         fc_total += 1
 
         if os.path.isfile(file_with_path + '.processed') and not ctx.obj.get('FORCE'):
-            click.echo('Warning: this source file "%s" has been converted to EGA XML before, will be ignored unless "--force" option is used.' % file_with_path)
+            click.echo('Warning: this source file "%s" has been converted to EGA XML before, will be ignored unless "--force" option is used.' % file_with_path, err=True)
             continue
 
         with open (file_with_path, 'r') as x: xml_str = x.read()
@@ -63,12 +63,12 @@ def prepare_analysis(ctx, source):
         # we wait until the last moment to do this - lazy load
         if not sample_lookup: load_samples(sample_lookup)
         if not sample_lookup:
-            click.echo('Error: no sample info available.')
+            click.echo('Error: no sample info available.', err=True)
             ctx.abort()
 
         if not file_info: load_file_info(file_info, ctx)
         if not file_info:
-            click.echo('Error: no staged file info (md5sum etc) available.')
+            click.echo('Error: no staged file info (md5sum etc) available.', err=True)
             ctx.abort()
 
         if ctx.obj['CURRENT_DIR_TYPE'].startswith('analysis_alignment.'):
@@ -76,8 +76,6 @@ def prepare_analysis(ctx, source):
         elif ctx.obj['CURRENT_DIR_TYPE'].startswith('analysis_variation.'):
             rev = build_variation_analysis(analysis_obj, analysis_info, gnos_analysis_id, sample_lookup, file_info, ctx)
 
-        #click.echo(json.dumps(analysis_obj, indent=2))
-        #click.echo(xmltodict.unparse(analysis_obj, pretty=True))
         if not rev: continue
 
         # write the flag file to mark its been processed

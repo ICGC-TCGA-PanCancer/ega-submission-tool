@@ -11,11 +11,11 @@ from ..util import get_template
 def prepare_sample(ctx, source):
     regex = '^sample\.' + ctx.obj['PROJECT'] + '\.[_0-9a-zA-Z\-]+\.tsv$'
     if not re.match(re.compile(regex), source):
-        click.echo('Error: specified source file does not match naming convention: %s' % regex)
+        click.echo('Error: specified source file does not match naming convention: %s' % regex, err=True)
         ctx.abort()
 
     if not os.path.isfile(source):
-        click.echo('Error: specified source file does not exist.')
+        click.echo('Error: specified source file does not exist.', err=True)
         ctx.abort()
 
     # read study template xml file
@@ -39,22 +39,20 @@ def prepare_sample(ctx, source):
                     sa['VALUE'] = sample_info.get(sa['TAG']) if sample_info.get(sa['TAG']) else ''
 
             except KeyError, e:
-                click.echo('Error: KeyError, %s' % str(e))
+                click.echo('Error: KeyError, %s' % str(e), err=True)
                 ctx.abort()
             except IndexError, e:
-                click.echo('Error: IndexError, %s' % str(e))
+                click.echo('Error: IndexError, %s' % str(e), err=True)
                 ctx.abort()
             except Exception, e:
-                click.echo('Error: %s' % str(e))
+                click.echo('Error: %s' % str(e), err=True)
                 ctx.abort()
 
             sample_obj['SAMPLE_SET']['SAMPLE'].append(sample)
 
-    #click.echo(json.dumps(sample_obj, indent=2))
-    #click.echo(xmltodict.unparse(sample_obj, pretty=True))
     out_file = re.sub(r'\.tsv$', '.xml', source)
     if os.path.isfile(out_file) and not ctx.obj.get('FORCE'):
-        click.echo('Error: this source file has been converted to EGA XML before, will not overwrite without "--force" option.')
+        click.echo('Error: this source file has been converted to EGA XML before, will not overwrite without "--force" option.', err=True)
         ctx.abort()
 
     with open(out_file, 'w') as w: w.write(xmltodict.unparse(sample_obj, pretty=True))

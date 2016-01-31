@@ -22,12 +22,11 @@ def build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, samp
 
     sample_refname = sample_lookup.get(sample_uuid)
     if not sample_refname:
-        click.echo('Warning: missing sample ID lookup for %s' % sample_uuid)
+        click.echo('Warning: missing sample ID lookup for %s in GNOS object %s' % (sample_uuid, gnos_analysis_id), err=True)
         return False
 
     analysis_obj['ANALYSIS_SET']['ANALYSIS']['SAMPLE_REF']['@refname'] = sample_refname
-    analysis_obj['ANALYSIS_SET']['ANALYSIS']['SAMPLE_REF']['@refcenter'] \
-        = analysis_info['TARGETS']['TARGET']['@refcenter']
+    analysis_obj['ANALYSIS_SET']['ANALYSIS']['SAMPLE_REF']['@refcenter'] = ctx.obj['SETTINGS']['centre_name']  # must be the same
 
     analysis_obj['ANALYSIS_SET']['ANALYSIS']['ANALYSIS_TYPE']['REFERENCE_ALIGNMENT']['SEQUENCE'] \
         = analysis_info['ANALYSIS_TYPE']['REFERENCE_ALIGNMENT']['SEQ_LABELS']['SEQUENCE']
@@ -40,10 +39,9 @@ def build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, samp
     analysis_obj['ANALYSIS_SET']['ANALYSIS']['ANALYSIS_ATTRIBUTES']['ANALYSIS_ATTRIBUTE'] \
         = analysis_info['ANALYSIS_ATTRIBUTES']['ANALYSIS_ATTRIBUTE']
 
-    filename = os.path.join(gnos_analysis_id, 'test.txt')  # debug only, to be deleted
-    #filename = os.path.join(gnos_analysis_id, 'analysis.%s.GNOS.xml' % gnos_analysis_id)  # the gnos xml as readme
+    filename = os.path.join(gnos_analysis_id, 'analysis.%s.GNOS.xml.gz' % gnos_analysis_id)  # the gnos xml as readme
     if not file_info.get(filename + '.gpg'):
-        click.echo('Warning: missing file info for: %s' % filename)
+        click.echo('Warning: missing file info for: %s' % filename, err=True)
         report_missing_file_info(filename + '.gpg', ctx)
         return False
 
@@ -59,7 +57,7 @@ def build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, samp
         filename = os.path.join(gnos_analysis_id, f['@filename'])
 
         if not file_info.get(filename + '.gpg'):
-            click.echo('Warning: missing file info for: %s' % filename)
+            click.echo('Warning: missing file info for: %s' % filename, err=True)
             report_missing_file_info(filename + '.gpg', ctx)
             return False
 
@@ -80,11 +78,12 @@ def build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, samp
         f['@unencrypted_checksum'] = files[ftype]['unencrypted_checksum']
 
         if not f['@filename'] + '.gpg' in staged_files:
-          if not 'test.txt' in f['@filename']:  # debug only, to be deleted
-            missed_files.append(f['@filename'] + '.gpg')
+            # the following if statement is for debug only, to be deleted when readme files are staged
+            if not ftype == 'readme_file':  # this says if the ftype is readme_file, will not report as missing
+                missed_files.append(f['@filename'] + '.gpg')
 
     if missed_files:
-        click.echo('Warning: missing files on FTP for GNOS xml: %s' % gnos_analysis_id)
+        click.echo('Warning: missing files on FTP for GNOS xml: %s' % gnos_analysis_id, err=True)
         report_missing_file(missed_files, ctx)
         return False
 
