@@ -77,10 +77,7 @@ def build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, samp
         f['@checksum'] = files[ftype]['checksum']
         f['@unencrypted_checksum'] = files[ftype]['unencrypted_checksum']
 
-        if not f['@filename'] + '.gpg' in staged_files:
-            # the following if statement is for debug only, to be deleted when readme files are staged
-            if not ftype == 'readme_file':  # this says if the ftype is readme_file, will not report as missing
-                missed_files.append(f['@filename'] + '.gpg')
+        if not f['@filename'] + '.gpg' in staged_files: missed_files.append(f['@filename'] + '.gpg')
 
     if missed_files:
         click.echo('Warning: missing files on FTP for GNOS xml: %s' % gnos_analysis_id, err=True)

@@ -24,7 +24,7 @@ def _do_submission(ctx, submission_obj, analyses_to_be_submitted):
     submission_file = os.path.join(os.getcwd(), submission_file)
     metadata_xmls = [os.path.join(os.getcwd(), 'analysis', 'analysis.' + f + '.xml') for f in analyses_to_be_submitted]
 
-    submit(ctx, submission_file, metadata_xmls)
+    submit(ctx, 'ANALYSIS', submission_file, metadata_xmls)
 
 
 def submit_analysis(ctx, source):

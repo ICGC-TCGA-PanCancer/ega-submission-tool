@@ -138,6 +138,7 @@ def load_samples(sample_lookup):
                 sample_lookup[sample_info['aliquot_id/sample_uuid']] = \
                     sample_info['icgc_sample_id']
 
+
 def load_file_info(file_info, ctx):
     file_info_dir = '_test_file_info' if ctx.obj['IS_TEST'] else 'file_info'
 
@@ -174,12 +175,28 @@ def report_missing_file_info(file_with_path, ctx):
     open(os.path.join(info_missing_dir, file_with_path), 'a').close()
 
 
-def submit(ctx, submission_file, metadata_xmls):
+def update_original_xml_with_ega_accession(ega_type, metadata_xmls, receipt_file):
+    submitted_items = get_submitted_items_from_receipt(receipt_file, ega_type, '')
+
+    for xml in metadata_xmls:
+        with open(xml, 'r') as x: xml_str = x.read()
+        metadata_obj = xmltodict.parse(xml_str)
+        root_el = metadata_obj.keys()[0]  # XML must have only one root
+        if not isinstance(metadata_obj[root_el][ega_type], list):
+            metadata_obj[root_el][ega_type] = [ metadata_obj[root_el][ega_type] ]
+
+        for item in metadata_obj[root_el][ega_type]:
+            item['@accession'] = submitted_items.get(item['@alias'])
+
+        # write back to the same file with accession added
+        with open(xml, 'w') as x: x.write(xmltodict.unparse(metadata_obj, pretty=True))
+
+
+def submit(ctx, ega_type, submission_file, metadata_xmls):
     ega_obj_type = 'SUBMISSION'
     files = '-F "%s=@%s" ' % (ega_obj_type, submission_file)
 
-    ega_obj_type = ctx.obj['CURRENT_DIR_TYPE'].upper()
-    if ega_obj_type.startswith('ANALYSIS'): ega_obj_type = 'ANALYSIS'
+    ega_obj_type = ega_type.upper()
 
     for f in metadata_xmls:
         files = files + '-F "%s=@%s" ' % (ega_obj_type, f)
@@ -190,7 +207,7 @@ def submit(ctx, submission_file, metadata_xmls):
         api_endpoint = ctx.obj['SETTINGS']['metadata_endpoint_prod'] + ctx.obj['AUTH']
 
     shell_cmd = 'curl -k %s "%s"' % (files, api_endpoint)
-    print shell_cmd
+    #click.echo(shell_cmd)  # debug
     process = subprocess.Popen(
             shell_cmd,
             shell=True,
@@ -215,6 +232,10 @@ def submit(ctx, submission_file, metadata_xmls):
             if receipt_obj['RECEIPT']['@success'].lower() == 'true':
                 receipt_file = submission_file.replace('.submission-', '.receipt-')
                 with open(receipt_file, 'w') as w: w.write(receipt)
+
+                if not ctx.obj['IS_TEST']:
+                    update_original_xml_with_ega_accession(ega_obj_type, metadata_xmls, receipt_file)
+
                 click.echo('Succeeded with response:\n%s' % receipt)
             else:
                 click.echo('Failed, see below for details:\n%s' % receipt, err=True)
@@ -232,7 +253,7 @@ def get_submitted_items_from_receipt(filename, ega_type, identifier):
     if not ega_type in ('SUBMISSION', 'STUDY', 'SAMPLE', 'ANALYSIS', 'DATASET'):
         click.echo('Warning: unknown EGA type be extracted from EGA submisson receipt - %s' % ega_type, err=True)
         return []
-    elif not identifier in ('@accession', '@alias'):
+    elif not identifier in ('@accession', '@alias', ''):  # empty value means the client wants a dict back
         click.echo('Warning: unknown EGA type be extracted from EGA submisson receipt - %s' % ega_type, err=True)
         return []
 
@@ -241,6 +262,10 @@ def get_submitted_items_from_receipt(filename, ega_type, identifier):
     items = receipt_obj.get('RECEIPT', {}).get(ega_type)
     if items:
         if not isinstance(items, list): items = [ copy.deepcopy(items) ]
-        return [i.get(identifier) for i in items]
 
-    return []
+        if identifier == '':
+            return {i.get('@alias'): i.get('@accession') for i in items}
+        else:
+            return [i.get(identifier) for i in items]
+
+    return({} if identifier == '' else [])

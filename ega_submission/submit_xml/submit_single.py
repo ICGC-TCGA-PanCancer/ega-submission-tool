@@ -28,4 +28,4 @@ def submit_single(ctx, ega_type, source):
     submission_file = os.path.join(os.getcwd(), submission_file)
     metadata_xmls = [os.path.join(os.getcwd(), source)]
 
-    submit(ctx, submission_file, metadata_xmls)
+    submit(ctx, ega_type, submission_file, metadata_xmls)
