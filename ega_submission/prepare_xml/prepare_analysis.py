@@ -4,6 +4,7 @@ import click
 import xmltodict
 import json
 import copy
+import gzip
 from build_analysis import build_alignment_analysis, build_variation_analysis
 from ..util import get_template, load_samples, load_file_info, report_missing_file
 
@@ -37,9 +38,9 @@ def prepare_analysis(ctx, source):
     fc_total = 0
     fc_processed = 0
     # file name convention
-    pattern = re.compile('^analysis\.([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\.GNOS\.xml$')
+    pattern = re.compile('^analysis\.([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\.GNOS\.xml\.gz$')
     for f in os.listdir(source):
-        file_with_path = os.path.join(source,f)
+        file_with_path = os.path.join(source, f)
         if not os.path.isfile(file_with_path): continue
 
         m = re.match(pattern, f)
@@ -55,7 +56,7 @@ def prepare_analysis(ctx, source):
             click.echo('Warning: this source file "%s" has been converted to EGA XML before, will be ignored unless "--force" option is used.' % file_with_path, err=True)
             continue
 
-        with open (file_with_path, 'r') as x: xml_str = x.read()
+        with gzip.open (file_with_path, 'rb') as x: xml_str = x.read()
         analysis_info = xmltodict.parse(xml_str)['ResultSet']['Result']['analysis_xml']['ANALYSIS_SET']['ANALYSIS']
 
         analysis_obj = copy.deepcopy(analysis_template_obj)
@@ -82,7 +83,7 @@ def prepare_analysis(ctx, source):
         with open(file_with_path + '.processed', 'w') as w: w.write('')
 
         fc_processed += 1
-        out_file = os.path.join('analysis', re.sub(r'\.GNOS\.xml$', '.xml', f))
+        out_file = os.path.join('analysis', re.sub(r'\.GNOS\.xml\.gz$', '.xml', f))
         with open(out_file, 'w') as w: w.write(xmltodict.unparse(analysis_obj, pretty=True))
 
     click.echo('Processed %i out of %i input GNOS xmls' % (fc_processed, fc_total))
