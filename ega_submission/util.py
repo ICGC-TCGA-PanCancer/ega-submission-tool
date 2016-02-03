@@ -236,7 +236,7 @@ def submit(ctx, ega_type, submission_file, metadata_xmls):
                 if not ctx.obj['IS_TEST']:
                     update_original_xml_with_ega_accession(ega_obj_type, metadata_xmls, receipt_file)
 
-                click.echo('Succeeded with response:\n%s' % receipt)
+                click.echo('Succeeded with response:\n%s\n\n' % receipt, err=True)  # not error, just to output this to stderr
             else:
                 click.echo('Failed, see below for details:\n%s' % receipt, err=True)
                 failed = True  # can't call abort() here, must flag it instead
@@ -244,7 +244,10 @@ def submit(ctx, ega_type, submission_file, metadata_xmls):
             click.echo('Failed, unknown response type, see below for details:\n%s\n%s' % (out, e), err=True)
             ctx.abort()
 
-        if failed: ctx.abort()
+        if failed:
+            return False
+        else:
+            return True
 
 
 def get_submitted_items_from_receipt(filename, ega_type, identifier):

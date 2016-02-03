@@ -24,7 +24,11 @@ def _do_submission(ctx, submission_obj, analyses_to_be_submitted):
     submission_file = os.path.join(os.getcwd(), submission_file)
     metadata_xmls = [os.path.join(os.getcwd(), 'analysis', 'analysis.' + f + '.xml') for f in analyses_to_be_submitted]
 
-    submit(ctx, 'ANALYSIS', submission_file, metadata_xmls)
+    if not submit(ctx, 'ANALYSIS', submission_file, metadata_xmls):
+        click.echo('Submission failed, see above for more details.\n\n', err=True)
+        return False
+    else:
+        return True
 
 
 def submit_analysis(ctx, source):
@@ -43,6 +47,7 @@ def submit_analysis(ctx, source):
     batch_count = 0
     fc_total = 0
     fc_processed = 0
+    success_count = 0
     pattern = re.compile('^analysis\.([^\.]+)\.xml$')
     analyses_to_be_submitted = []
 
@@ -69,19 +74,16 @@ def submit_analysis(ctx, source):
 
         if fc_processed % BATCH_SIZE == 0:  # one batch completed
             submission_obj = prepare_submission(ctx, 'analysis', analyses_to_be_submitted)
-            _do_submission(ctx, submission_obj, analyses_to_be_submitted)
+            if _do_submission(ctx, submission_obj, analyses_to_be_submitted): success_count += 1
             batch_count += 1
             analyses_to_be_submitted = []
 
 
     if analyses_to_be_submitted:  # there are still some to be submitted
         submission_obj = prepare_submission(ctx, 'analysis',  analyses_to_be_submitted)
-        _do_submission(ctx, submission_obj, analyses_to_be_submitted)
+        if _do_submission(ctx, submission_obj, analyses_to_be_submitted): success_count += 1
         batch_count += 1
 
 
-    click.echo('Processed %i out of %i input analysis xmls in %i submission(s).' % (fc_processed, fc_total, batch_count))
-
-
-
-
+    click.echo('Processed %i out of %i input analysis xmls in %i submission(s), %i submission(s) succeeded.' \
+        % (fc_processed, fc_total, batch_count, success_count), err=True)  # output to stderr, not really err here

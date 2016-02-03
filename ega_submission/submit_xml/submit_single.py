@@ -28,4 +28,6 @@ def submit_single(ctx, ega_type, source):
     submission_file = os.path.join(os.getcwd(), submission_file)
     metadata_xmls = [os.path.join(os.getcwd(), source)]
 
-    submit(ctx, ega_type, submission_file, metadata_xmls)
+    if not submit(ctx, ega_type, submission_file, metadata_xmls):
+        click.echo('Submission failed, see above for more details.\n\n', err=True)
+        ctx.abort()
