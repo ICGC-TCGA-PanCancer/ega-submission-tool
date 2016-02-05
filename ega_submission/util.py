@@ -146,20 +146,26 @@ def load_samples(sample_lookup):
 def load_file_info(file_info, ctx):
     file_info_dir = '_test_file_info' if ctx.obj['IS_TEST'] else 'file_info'
 
-    staged_file_list = os.path.join(ctx.obj['WORKSPACE_PATH'], file_info_dir, 'staged_files.tsv')
-    with open(staged_file_list, 'r') as f:
-        reader = csv.DictReader(f, delimiter='\t')
-        for finfo in reader:
-            file_info[finfo['filename']] = {
-                'checksum': finfo['checksum'],
-                'unencrypted_checksum': finfo['unencrypted_checksum']
-            }
+    staged_file_list = [ os.path.join(ctx.obj['WORKSPACE_PATH'], file_info_dir, 'file_info.tsv') ]
+
+    staged_file_list += glob.glob(os.path.join(ctx.obj['WORKSPACE_PATH'], \
+        file_info_dir, 'GNOS_xml_file_info', '*.tsv'))
+
+    for fs in staged_file_list:
+        print fs
+        with open(fs, 'r') as f:
+            reader = csv.DictReader(f, delimiter='\t')
+            for finfo in reader:
+                file_info[finfo['filename']] = {
+                    'checksum': finfo['checksum'],
+                    'unencrypted_checksum': finfo['unencrypted_checksum']
+                }
 
 
 def report_missing_file(missed_files, ctx):
     file_info_dir = '_test_file_info' if ctx.obj['IS_TEST'] else 'file_info'
 
-    missed_file_dir = os.path.join(ctx.obj['WORKSPACE_PATH'], file_info_dir, 'missed_files')
+    missed_file_dir = os.path.join(ctx.obj['WORKSPACE_PATH'], file_info_dir, 'files_missed_on_ftp_server')
     for f in missed_files:
         dirname, filename = f.split('/')
         if not os.path.isdir(os.path.join(missed_file_dir, dirname)):
