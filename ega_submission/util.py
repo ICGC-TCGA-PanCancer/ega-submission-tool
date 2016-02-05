@@ -57,6 +57,10 @@ def get_current_dir_type(ctx):
     m = re.match(pattern, current_dir)
     if m and m.group(1) and m.group(2):
         ctx.obj['PROJECT'] = m.group(1)
+        if not ctx.obj['SETTINGS']['projects'].get(ctx.obj['PROJECT']):
+            click.echo('Error: unknown project - %s' % ctx.obj['PROJECT'])
+            ctx.abort()
+
         if ctx.obj['PROJECT'].startswith('TEST'):
             ctx.obj['IS_TEST_PROJ'] = True
             ctx.obj['IS_TEST'] = True  # work on TEST project is always a test

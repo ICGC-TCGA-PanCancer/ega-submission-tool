@@ -37,6 +37,8 @@ def prepare_sample(ctx, source):
                 sample['TITLE'] = 'ICGC Sample: %s' % sample_info['icgc_sample_id']
                 for sa in sample['SAMPLE_ATTRIBUTES']['SAMPLE_ATTRIBUTE']:
                     sa['VALUE'] = sample_info.get(sa['TAG']) if sample_info.get(sa['TAG']) else ''
+                    if sa['TAG'] == 'phenotype' and not sa['VALUE']:
+                        sa['VALUE'] = ctx.obj['SETTINGS']['projects'][ctx.obj['PROJECT']].get('phenotype')
 
             except KeyError, e:
                 click.echo('Error: KeyError, %s' % str(e), err=True)
