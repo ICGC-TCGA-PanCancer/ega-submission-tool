@@ -40,8 +40,10 @@ def build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, samp
         = analysis_info['ANALYSIS_ATTRIBUTES']['ANALYSIS_ATTRIBUTE']
 
     filename = os.path.join(gnos_analysis_id, 'analysis.%s.GNOS.xml.gz' % gnos_analysis_id)  # the gnos xml as readme
-    if not file_info.get(filename + '.gpg'):
-        click.echo('Warning: missing file info for: %s' % filename, err=True)
+    if not file_info.get(filename + '.gpg') \
+        or not file_info[filename + '.gpg']['checksum'] \
+        or not file_info[filename + '.gpg']['unencrypted_checksum']:
+        click.echo('Warning: missing file info (checksum or unencrypted_checksum, or both) for: %s' % filename, err=True)
         report_missing_file_info(filename + '.gpg', ctx)
         return False
 
