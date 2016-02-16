@@ -63,9 +63,13 @@ def build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, samp
             report_missing_file_info(filename + '.gpg', ctx)
             return False
 
+        if not file_info[filename + '.gpg']['unencrypted_checksum'] == f['@checksum']:
+            click.echo('Warning: md5sum for unencrypted file in file_info.tsv is different from what is in GNOS xml for: %s' % filename, err=True)
+            return False
+
         files[f['@filetype']] = {
             'filename': filename,
-            'checksum': f['@checksum'],
+            'checksum': file_info[filename + '.gpg']['checksum'],
             'unencrypted_checksum': file_info[filename + '.gpg']['unencrypted_checksum']
         }
 
