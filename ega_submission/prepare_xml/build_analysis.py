@@ -43,9 +43,17 @@ def build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, samp
     if not file_info.get(filename + '.gpg') \
         or not file_info[filename + '.gpg']['checksum'] \
         or not file_info[filename + '.gpg']['unencrypted_checksum']:
-        click.echo('Warning: missing file info (checksum or unencrypted_checksum, or both) for: %s' % filename, err=True)
-        report_missing_file_info(filename + '.gpg', ctx)
-        return False
+
+            # now get md5sum from the FTP server
+            get_md5sum_from_ftp_server(filename, file_info, ctx)
+
+            if not file_info.get(filename + '.gpg') \
+                or not file_info[filename + '.gpg']['checksum'] \
+                or not file_info[filename + '.gpg']['unencrypted_checksum']:
+
+                click.echo('Warning: missing file info (checksum or unencrypted_checksum, or both) for: %s' % filename, err=True)
+                report_missing_file_info(filename + '.gpg', ctx)
+                return False
 
     files = {
         'readme_file': {
@@ -69,7 +77,7 @@ def build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, samp
                 or not file_info[filename + '.gpg']['checksum'] \
                 or not file_info[filename + '.gpg']['unencrypted_checksum']:
 
-                click.echo('Warning: missing file info for: %s' % filename, err=True)
+                click.echo('Warning: missing file info (checksum or unencrypted_checksum, or both) for: %s' % filename, err=True)
                 report_missing_file_info(filename + '.gpg', ctx)
                 return False
 
