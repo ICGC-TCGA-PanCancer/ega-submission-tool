@@ -1,6 +1,6 @@
 import os
 import click
-from ..util import ftp_files, report_missing_file, report_missing_file_info
+from ..util import ftp_files, report_missing_file, report_missing_file_info, get_md5sum_from_ftp_server
 
 
 def build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, sample_lookup, file_info, ctx):
@@ -58,10 +58,20 @@ def build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, samp
     for f in analysis_info['DATA_BLOCK']['FILES']['FILE']:
         filename = os.path.join(gnos_analysis_id, f['@filename'])
 
-        if not file_info.get(filename + '.gpg'):
-            click.echo('Warning: missing file info for: %s' % filename, err=True)
-            report_missing_file_info(filename + '.gpg', ctx)
-            return False
+        if not file_info.get(filename + '.gpg') \
+            or not file_info[filename + '.gpg']['checksum'] \
+            or not file_info[filename + '.gpg']['unencrypted_checksum']:
+
+            # now get md5sum from the FTP server
+            get_md5sum_from_ftp_server(filename, file_info, ctx)
+
+            if not file_info.get(filename + '.gpg') \
+                or not file_info[filename + '.gpg']['checksum'] \
+                or not file_info[filename + '.gpg']['unencrypted_checksum']:
+
+                click.echo('Warning: missing file info for: %s' % filename, err=True)
+                report_missing_file_info(filename + '.gpg', ctx)
+                return False
 
         if not file_info[filename + '.gpg']['unencrypted_checksum'] == f['@checksum']:
             click.echo('Warning: md5sum for unencrypted file in file_info.tsv is different from what is in GNOS xml for: %s' % filename, err=True)

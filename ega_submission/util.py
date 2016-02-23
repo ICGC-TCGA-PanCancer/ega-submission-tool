@@ -152,7 +152,7 @@ def load_file_info(file_info, ctx):
         file_info_dir, 'GNOS_xml_file_info', '*.tsv'))
 
     for fs in staged_file_list:
-        print fs
+        #print fs
         with open(fs, 'r') as f:
             reader = csv.DictReader(f, delimiter='\t')
             for finfo in reader:
@@ -160,6 +160,35 @@ def load_file_info(file_info, ctx):
                     'checksum': finfo['checksum'],
                     'unencrypted_checksum': finfo['unencrypted_checksum']
                 }
+
+
+def get_md5sum_from_ftp_server(filename, file_info, ctx):
+    host = ctx.obj['SETTINGS']['ftp_server']
+    _, user, passwd = ctx.obj['AUTH'].split('%20') if len(ctx.obj['AUTH'].split('%20')) == 3 else ('', '', '')
+
+    ftp = ftplib.FTP(host, user, passwd)
+
+    file_info[filename + '.gpg'] = {
+            'checksum': None,
+            'unencrypted_checksum': None
+        }
+
+    for f in (filename + '.gpg.md5', filename + '.md5'):
+        data = []
+        def handle_lines(more_data):
+            data.append(more_data)
+
+        try:
+            resp = ftp.retrlines("RETR %s" % f, callback=handle_lines)
+        except:
+            continue
+
+        if len(data) == 0: continue
+
+        if f.endswith('.gpg.md5'):
+            file_info[filename + '.gpg']['checksum'] = data[0]
+        else:
+            file_info[filename + '.gpg']['unencrypted_checksum'] = data[0]
 
 
 def report_missing_file(missed_files, ctx):
