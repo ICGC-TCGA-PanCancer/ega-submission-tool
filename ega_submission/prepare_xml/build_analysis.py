@@ -7,12 +7,12 @@ def build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, samp
     # we may not need to use analysis_type (ctx.obj['CURRENT_DIR_TYPE']), WGS and RNA-Seq alignment
     # may be the same code
     analysis_obj['ANALYSIS_SET']['ANALYSIS']['@alias'] = gnos_analysis_id
-    analysis_obj['ANALYSIS_SET']['ANALYSIS']['@center_name'] = analysis_info['@center_name']
+    analysis_obj['ANALYSIS_SET']['ANALYSIS']['@center_name'] = analysis_info.get('@center_name', '')
     analysis_obj['ANALYSIS_SET']['ANALYSIS']['@broker_name'] = 'EGA'  # hardcode
-    analysis_obj['ANALYSIS_SET']['ANALYSIS']['@analysis_center'] = analysis_info['@analysis_center']
-    analysis_obj['ANALYSIS_SET']['ANALYSIS']['@analysis_date'] = analysis_info['@analysis_date']
-    analysis_obj['ANALYSIS_SET']['ANALYSIS']['TITLE'] = analysis_info['TITLE']
-    analysis_obj['ANALYSIS_SET']['ANALYSIS']['DESCRIPTION'] = analysis_info['DESCRIPTION']
+    analysis_obj['ANALYSIS_SET']['ANALYSIS']['@analysis_center'] = analysis_info.get('@analysis_center', '')
+    analysis_obj['ANALYSIS_SET']['ANALYSIS']['@analysis_date'] = analysis_info.get('@analysis_date', '')
+    analysis_obj['ANALYSIS_SET']['ANALYSIS']['TITLE'] = analysis_info.get('TITLE', '')
+    analysis_obj['ANALYSIS_SET']['ANALYSIS']['DESCRIPTION'] = analysis_info.get('DESCRIPTION', '')
     analysis_obj['ANALYSIS_SET']['ANALYSIS']['STUDY_REF']['@refname'] = 'PCAWG'  # hardcode this here
     analysis_obj['ANALYSIS_SET']['ANALYSIS']['STUDY_REF']['@refcenter'] = ctx.obj['SETTINGS']['centre_name']
 
