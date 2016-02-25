@@ -38,8 +38,10 @@ def submit_analysis(ctx, source):
 
     # parse all relavent submission receipts to identify items have been submitted before
     submitted_analysis = []
-    receipt_file_pattern = 'analysis.*.receipt-test_*.xml' if ctx.obj['IS_TEST'] else 'analysis.*.receipt_*.xml'
+    receipt_file_pattern = 'analysis.*.receipt-test_*.xml' if ctx.obj['IS_TEST'] else 'analysis.*.receipt-*.xml'
     for filename in os.listdir('analysis'):
+        if not ctx.obj['IS_TEST'] and 'receipt-test_' in filename: continue
+
         if fnmatch.fnmatch(filename, receipt_file_pattern):
             submitted_analysis += \
                 get_submitted_items_from_receipt(os.path.join('analysis', filename), 'ANALYSIS', '@alias')
