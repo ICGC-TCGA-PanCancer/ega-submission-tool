@@ -11,6 +11,7 @@ import ftplib
 import calendar
 import time
 import uuid
+import tarfile
 
 
 def find_workspace_root(cwd=os.getcwd()):
@@ -311,3 +312,77 @@ def get_submitted_items_from_receipt(filename, ega_type, identifier):
             return [i.get(identifier) for i in items]
 
     return({} if identifier == '' else [])
+
+
+def prepare_mapping(ctx, source):
+    regex = '^dataset\.' + ctx.obj['PROJECT'] + '_[_A-Z]+\.xml$'
+    if not re.match(re.compile(regex), source):
+        click.echo('Error: specified source file does not match naming convention: %s' % regex, err=True)
+        ctx.abort()
+
+    if not os.path.isfile(source):
+        click.echo('Error: specified dataset XML file does not exist.', err=True)
+        ctx.abort()
+
+    with open (source, 'r') as x: xml_str = x.read()
+    dataset_obj = xmltodict.parse(xml_str)
+
+    ega_dataset_id = dataset_obj['DATASETS']['DATASET']['@accession']
+
+    # now download dataset metadata tarball from EGA FTP server
+    host = ctx.obj['SETTINGS']['ftp_server']
+    _, user, passwd = ctx.obj['AUTH'].split('%20') if len(ctx.obj['AUTH'].split('%20')) == 3 else ('', '', '')
+
+    ftp = ftplib.FTP(host, user, passwd)
+
+    metadata_tar_file = '%s.tar.gz' % ega_dataset_id
+    click.echo('Downloading metadata from FTP server %s ...' % metadata_tar_file)
+    with open(metadata_tar_file, 'wb') as tar:
+        ftp.retrbinary('RETR metadata/%s' % metadata_tar_file, tar.write)
+
+    click.echo('Untar metadata file %s ...' % metadata_tar_file)
+    tar = tarfile.open(metadata_tar_file)
+    tar.extractall()
+    tar.close()
+
+    # parse {dataset_id}/delimited_maps/Study_analysis_sample.map
+    # TODO: should do some cross checking with previously submitted dataset
+    #       to ensure same analyses and samples submitted
+    analysis_sample = {}
+    with open ('%s/delimited_maps/Study_analysis_sample.map' % ega_dataset_id, 'r') as f:
+        for line in f:
+            fields = line.split('\t')
+            if not analysis_sample.get(fields[3]): analysis_sample[fields[3]] = []
+            analysis_sample[fields[3]].append(fields[6])
+
+    # parse {dataset_id}/delimited_maps/Sample_File.map
+    # TODO: should do some cross checking with previously submitted dataset
+    #       to ensure same files submitted
+    sample_file = {}
+    with open ('%s/delimited_maps/Sample_File.map' % ega_dataset_id, 'r') as f:
+        for line in f:
+            line = line.rstrip()
+            fields = line.split('\t')
+            fields[2] = re.sub(r"\.cip$", "", fields[2])
+            if not sample_file.get(fields[1]): sample_file[fields[1]] = []
+            sample_file[fields[1]].append([fields[3], fields[2]])
+
+    click.echo('Output mapping file %s.files.tsv ...' % ega_dataset_id)
+    lines = []
+    for analysis in sorted(analysis_sample):
+        for sample in sorted(analysis_sample[analysis]):
+            # no file info for this sample
+            if not sample_file.get(sample): continue
+            for f in sample_file[sample]:
+                file_id, file_name = f
+                lines.append([ega_dataset_id, analysis, file_id, file_name])
+
+    if lines:
+        with open('%s.files.tsv' % ega_dataset_id, 'w') as o:
+            o.write('\t'.join(['dataset_id', 'analysis_id', 'file_id', 'file']) + '\n')
+            for line in lines:
+                o.write('\t'.join(line) + '\n')
+        click.echo('Done!')
+    else:
+        click.echo('Error: nothing to output, please verify mapping files in metadata tarball is correct!', err=True)
+        ctx.abort()

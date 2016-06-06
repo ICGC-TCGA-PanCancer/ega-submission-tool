@@ -27,7 +27,8 @@ def main(ctx, auth, force, debug):
 def prepare(ctx, ega_type, source):
     if not (ctx.obj['CURRENT_DIR_TYPE'] == ega_type or 
             ctx.obj['CURRENT_DIR_TYPE'].startswith(ega_type + '_') or
-            (ctx.obj['CURRENT_DIR_TYPE'].startswith('analysis_') and ega_type == 'dataset')):
+            (ctx.obj['CURRENT_DIR_TYPE'].startswith('analysis_') and 
+                (ega_type == 'dataset' or ega_type == 'mapping'))):
         click.echo('Error: please make sure you are in %s directory.' % ega_type, err=True)
         ctx.abort()
 

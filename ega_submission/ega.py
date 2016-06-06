@@ -35,6 +35,8 @@ def prepare(ctx, ega_type, source):
         prepare_analysis(ctx, source)
     elif ega_type == 'dataset':
         prepare_dataset(ctx, source)
+    elif ega_type == 'mapping':
+        util.prepare_mapping(ctx, source)
     else:
         click.echo('Unknown object type: %s' % ega_type, err=True)
         ctx.abort()
