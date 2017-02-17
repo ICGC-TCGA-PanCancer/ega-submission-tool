@@ -364,8 +364,8 @@ def prepare_mapping(ctx, source):
             line = line.rstrip()
             fields = line.split('\t')
             fields[2] = re.sub(r"\.cip$", "", fields[2])
-            if not sample_file.get(fields[1]): sample_file[fields[1]] = []
-            sample_file[fields[1]].append([fields[3], fields[2]])
+            if not sample_file.get(fields[1]): sample_file[fields[1]] = set()
+            sample_file[fields[1]].add((fields[3], fields[2]))
 
     click.echo('Output mapping file %s.files.tsv ...' % ega_dataset_id)
     lines = []
