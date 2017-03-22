@@ -345,27 +345,40 @@ def prepare_mapping(ctx, source):
     tar.extractall()
     tar.close()
 
+    # parse {dataset_id}/delimited_maps/Analysis_Sample_meta_info.map
+    # TODO: should do some cross checking with previously submitted dataset
+    #       to ensure same analyses and samples submitted
+    sample_meta = {} # {SA_id: {sample_meta}}
+    with open ('%s/delimited_maps/Analysis_Sample_meta_info.map' % ega_dataset_id, 'r') as f:
+        for line in f:
+            fields = line.split('\t')
+            fields[1] = re.sub(r"^ICGC\ Sample\:\ ", "", fields[1])
+            pairs = [item.split("=") for item in fields[3].split(";")]
+            if not sample_meta.get(fields[1]): sample_meta[fields[1]] = {}
+            sample_meta[fields[1]].update(dict((k,v) for (k,v) in pairs))
+
+
     # parse {dataset_id}/delimited_maps/Study_analysis_sample.map
     # TODO: should do some cross checking with previously submitted dataset
     #       to ensure same analyses and samples submitted
-    analysis_sample = {}
+    analysis_sample = {} # {EGAZ_id: [SA_id]}
     with open ('%s/delimited_maps/Study_analysis_sample.map' % ega_dataset_id, 'r') as f:
         for line in f:
             fields = line.split('\t')
             if not analysis_sample.get(fields[3]): analysis_sample[fields[3]] = []
-            analysis_sample[fields[3]].append(fields[6])
+            analysis_sample[fields[3]].append(fields[7])
 
     # parse {dataset_id}/delimited_maps/Sample_File.map
     # TODO: should do some cross checking with previously submitted dataset
     #       to ensure same files submitted
-    sample_file = {}
+    sample_file = {} # {SA_id: (EGAF, file_name, EGAN_id)}
     with open ('%s/delimited_maps/Sample_File.map' % ega_dataset_id, 'r') as f:
         for line in f:
             line = line.rstrip()
             fields = line.split('\t')
             fields[2] = re.sub(r"\.cip$", "", fields[2])
-            if not sample_file.get(fields[1]): sample_file[fields[1]] = set()
-            sample_file[fields[1]].add((fields[3], fields[2]))
+            if not sample_file.get(fields[0]): sample_file[fields[0]] = set()
+            sample_file[fields[0]].add((fields[3], fields[2], field[1]))
 
     click.echo('Output mapping file %s.files.tsv ...' % ega_dataset_id)
     lines = []
@@ -373,9 +386,13 @@ def prepare_mapping(ctx, source):
         for sample in sorted(analysis_sample[analysis]):
             # no file info for this sample
             if not sample_file.get(sample): continue
+            if not sample_meta.get(sample): continue
+            submitter_sample_id = sample_meta[sample].get('submitter_sample_id')
+            aliquot_id = sample_meta[sample].get('aliquot_id/sample_uuid')
+            icgc_project_code = sample_meta[sample].get('icgc_project_code')
             for f in sample_file[sample]:
-                file_id, file_name = f
-                lines.append([ega_dataset_id, analysis, file_id, file_name])
+                file_id, file_name, sample_id = f
+                lines.append([ega_dataset_id, analysis, file_id, file_name, sample_id, submitter_sample_id, sample, aliquot_id, icgc_project_code])
 
     if lines:
         with open('%s.files.tsv' % ega_dataset_id, 'w') as o:
