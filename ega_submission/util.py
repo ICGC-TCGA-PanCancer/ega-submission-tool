@@ -353,7 +353,7 @@ def prepare_mapping(ctx, source):
         for line in f:
             fields = line.split('\t')
             fields[1] = re.sub(r"^ICGC\ Sample\:\ ", "", fields[1])
-            pairs = [item.split("=") for item in fields[2].split(";")]
+            pairs = [item.split("=") for item in fields[2].rstrip(";").split(";")]
             if not sample_meta.get(fields[1]): sample_meta[fields[1]] = {}
             sample_meta[fields[1]].update(dict((k,v) for (k,v) in pairs))
 
