@@ -353,7 +353,7 @@ def prepare_mapping(ctx, source):
         for line in f:
             fields = line.split('\t')
             fields[1] = re.sub(r"^ICGC\ Sample\:\ ", "", fields[1])
-            pairs = [item.split("=") for item in fields[2].rstrip(";").split(";")]
+            pairs = [item.split("=") for item in fields[2].rstrip(";\n").split(";")]
             if not sample_meta.get(fields[1]): sample_meta[fields[1]] = {}
             sample_meta[fields[1]].update(dict((k,v) for (k,v) in pairs))
 
@@ -378,7 +378,7 @@ def prepare_mapping(ctx, source):
             fields = line.split('\t')
             fields[2] = re.sub(r"\.cip$", "", fields[2])
             if not sample_file.get(fields[0]): sample_file[fields[0]] = set()
-            sample_file[fields[0]].add((fields[3], fields[2], field[1]))
+            sample_file[fields[0]].add((fields[3], fields[2], fields[1]))
 
     click.echo('Output mapping file %s.files.tsv ...' % ega_dataset_id)
     lines = []
@@ -396,7 +396,7 @@ def prepare_mapping(ctx, source):
 
     if lines:
         with open('%s.files.tsv' % ega_dataset_id, 'w') as o:
-            o.write('\t'.join(['dataset_id', 'analysis_id', 'file_id', 'file']) + '\n')
+            o.write('\t'.join(['dataset_id', 'analysis_id', 'file_id', 'file', 'sample_id', 'submitter_sample_id', 'icgc_sample_id', 'aliquot_id', 'icgc_project_code']) + '\n')
             for line in lines:
                 o.write('\t'.join(line) + '\n')
         click.echo('Done!')
