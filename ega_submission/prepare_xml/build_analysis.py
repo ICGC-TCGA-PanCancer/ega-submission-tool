@@ -63,7 +63,16 @@ def build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, samp
         }
     }
 
-    for f in analysis_info['DATA_BLOCK']['FILES']['FILE']:
+    # special handel for xmls which only contain one file information in the DATA_BLOCK
+    if isinstance(analysis_info['DATA_BLOCK']['FILES']['FILE'], dict):
+        file_list = [analysis_info['DATA_BLOCK']['FILES']['FILE']]  
+    elif isinstance(analysis_info['DATA_BLOCK']['FILES']['FILE'], list):
+        file_list = analysis_info['DATA_BLOCK']['FILES']['FILE'] 
+    else:
+        click.echo('Warning: DATA_BLOCK in GNOS xml was likely incorrectly populated!')
+        return False
+
+    for f in file_list:
         filename = os.path.join(gnos_analysis_id, f['@filename'])
 
         if not file_info.get(filename + '.gpg') \
@@ -90,6 +99,31 @@ def build_alignment_analysis(analysis_obj, analysis_info, gnos_analysis_id, samp
             'checksum': file_info[filename + '.gpg']['checksum'],
             'unencrypted_checksum': file_info[filename + '.gpg']['unencrypted_checksum']
         }
+        if filename.endswith('bam'): bam_filename = filename
+
+    # special handel for many RNA-Seq xmls which do not contain bai information in the DATA_BLOCK
+    if not files.get('bai'):
+        filename = bam_filename+'.bai'
+        if not file_info.get(filename + '.gpg') \
+            or not file_info[filename + '.gpg']['checksum'] \
+            or not file_info[filename + '.gpg']['unencrypted_checksum']:
+
+                # now get md5sum from the FTP server
+                get_md5sum_from_ftp_server(filename, file_info, ctx)
+
+                if not file_info.get(filename + '.gpg') \
+                    or not file_info[filename + '.gpg']['checksum'] \
+                    or not file_info[filename + '.gpg']['unencrypted_checksum']:
+
+                    click.echo('Warning: missing file info (checksum or unencrypted_checksum, or both) for: %s' % filename, err=True)
+                    report_missing_file_info(filename + '.gpg', ctx)
+                    return False
+
+        files['bai'] = {
+                'filename': filename,
+                'checksum': file_info[filename + '.gpg']['checksum'],
+                'unencrypted_checksum': file_info[filename + '.gpg']['unencrypted_checksum']
+        }        
 
     # get list of files on the FTP server under 'gnos_analysis_id' folder
     staged_files = ftp_files(gnos_analysis_id, ctx)
