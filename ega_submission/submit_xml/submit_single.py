@@ -19,7 +19,7 @@ def submit_single(ctx, ega_type, source):
     submission_file = re.sub(r'\.xml$', '.submission-' + submission_alias + '.xml', source)
 
     if not ctx.obj['IS_TEST'] and not ctx.obj.get('FORCE') \
-        and file_pattern_exist(ctx.obj['CURRENT_DIR'], r'.+\.submission-[0-9]+_.+'):
+        and file_pattern_exist(ctx.obj['CURRENT_DIR'], source.rstrip('xml')+'submission-[0-9]+_.+'):
         click.echo('Error: this %s xml may have been submitted before, will not submit without "--force" option.' % ega_type, err=True)
         ctx.abort()
 
