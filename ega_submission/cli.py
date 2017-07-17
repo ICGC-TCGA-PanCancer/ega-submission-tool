@@ -60,6 +60,22 @@ def submit(ctx, test, ega_type, source):
 
     ega.submit(ctx, ega_type, source)
 
+@main.command()
+@click.option('--test', default=False, is_flag=True, help='Submit to EGA test server')
+@click.argument('ega_type', nargs=1)
+@click.argument('source', nargs=1)
+@click.pass_context
+def update(ctx, test, ega_type, source):
+    if not (ctx.obj['CURRENT_DIR_TYPE'] == ega_type or 
+            ctx.obj['CURRENT_DIR_TYPE'].startswith(ega_type + '_') or
+            (ctx.obj['CURRENT_DIR_TYPE'].startswith('analysis_') and ega_type == 'dataset')):
+        click.echo('Error: please make sure you are in %s directory.' % ega_type, err=True)
+        ctx.abort()
+
+    if test: ctx.obj['IS_TEST'] = True
+
+    ega.update(ctx, ega_type, source)
+
 
 if __name__ == '__main__':
   main()
