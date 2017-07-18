@@ -7,7 +7,7 @@ import time
 import uuid
 import xmltodict
 import fnmatch
-from ..util import get_template, file_pattern_exist, submit, prepare_submission, get_submitted_items_from_receipt
+from ..util import get_template, file_pattern_exist, submit, prepare_submission, get_submitted_items_from_receipt, update_original_xml_with_ega_accession
 
 # not as expected, it turns out EGA submission does not allow more than 1 object per type per submission
 # as such, BATCH_SIZE must be set to 1
