@@ -315,7 +315,7 @@ def get_submitted_items_from_receipt(filename, ega_type, identifier):
 
 
 def prepare_mapping(ctx, source):
-    regex = '^dataset\.' + ctx.obj['PROJECT'] + '_[_a-zA-Z\-]+\.xml$'
+    regex = '^dataset\.' + ctx.obj['PROJECT'] + '_[_0-9a-zA-Z\-]+\.xml$'
     if not re.match(re.compile(regex), source):
         click.echo('Error: specified source file does not match naming convention: %s' % regex, err=True)
         ctx.abort()
