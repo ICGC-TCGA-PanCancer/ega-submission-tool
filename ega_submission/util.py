@@ -90,25 +90,27 @@ def file_pattern_exist(dirname, pattern):
     return False
 
 
-def prepare_submission(ctx, ega_type, objects_to_be_submitted):
+def prepare_submission(ctx, ega_type, objects_to_be_submitted, action_note='ADD'):
     # read submission template xml file
     template_file = os.path.join(ctx.obj['WORKSPACE_PATH'], 'settings', 'submission.template.xml')
     submission_obj = get_template(template_file)
 
     epoch_time = str(int(calendar.timegm(time.gmtime())))
     uuid_str = str(uuid.uuid4())
-    alias_parts = [epoch_time, uuid_str]
+    alias_parts = [action_note, epoch_time, uuid_str]
     if ctx.obj['IS_TEST']: alias_parts.insert(0, 'test')
     submission_alias = '_'.join(alias_parts)
 
     try:
         submission_obj['SUBMISSION_SET']['SUBMISSION']['@alias'] = submission_alias
         actions = submission_obj['SUBMISSION_SET']['SUBMISSION']['ACTIONS']['ACTION']
-        action = actions.pop(0)  # remove the first placeholder action
+        actions.pop(0)  # remove the first placeholder action
+        action = {}
         source_file_pattern = re.compile('^' + ega_type + '\.' + '.+\.xml$')
         for source in objects_to_be_submitted:
-            action['ADD']['@source'] = source if re.match(source_file_pattern, source) else '.'.join([ega_type, source, 'xml'])
-            action['ADD']['@schema'] = ega_type
+            action[action_note] = {}
+            action[action_note]['@source'] = source if re.match(source_file_pattern, source) else '.'.join([ega_type, source, 'xml'])
+            action[action_note]['@schema'] = ega_type
             actions.insert(0, copy.deepcopy(action))  # add action back in the first place
 
     except Exception, e:
@@ -215,24 +217,23 @@ def report_missing_file_info(file_with_path, ctx):
     open(os.path.join(info_missing_dir, file_with_path), 'a').close()
 
 
-def update_original_xml_with_ega_accession(ega_type, metadata_xmls, receipt_file):
-    submitted_items = get_submitted_items_from_receipt(receipt_file, ega_type, '')
+def update_original_xml_with_ega_accession(ega_type, xml, submitted_items):
 
-    for xml in metadata_xmls:
-        with open(xml, 'r') as x: xml_str = x.read()
-        metadata_obj = xmltodict.parse(xml_str)
-        root_el = metadata_obj.keys()[0]  # XML must have only one root
-        if not isinstance(metadata_obj[root_el][ega_type], list):
-            metadata_obj[root_el][ega_type] = [ metadata_obj[root_el][ega_type] ]
+    with open(xml, 'r') as x: xml_str = x.read()
+    metadata_obj = xmltodict.parse(xml_str)
+    root_el = metadata_obj.keys()[0]  # XML must have only one root
+    ega_type = ega_type.upper()
+    if not isinstance(metadata_obj[root_el][ega_type], list):
+        metadata_obj[root_el][ega_type] = [ metadata_obj[root_el][ega_type] ]
 
-        for item in metadata_obj[root_el][ega_type]:
-            item['@accession'] = submitted_items.get(item['@alias'])
+    for item in metadata_obj[root_el][ega_type]:
+        item['@accession'] = submitted_items.get(item['@alias'])
 
-        # write back to the same file with accession added
-        with open(xml, 'w') as x: x.write(xmltodict.unparse(metadata_obj, pretty=True))
+    # write back to the same file with accession added
+    with open(xml, 'w') as x: x.write(xmltodict.unparse(metadata_obj, pretty=True))
 
 
-def submit(ctx, ega_type, submission_file, metadata_xmls):
+def submit(ctx, ega_type, submission_file, metadata_xmls, action_note='ADD'):
     ega_obj_type = 'SUBMISSION'
     files = '-F "%s=@%s" ' % (ega_obj_type, submission_file)
 
@@ -273,8 +274,10 @@ def submit(ctx, ega_type, submission_file, metadata_xmls):
                 receipt_file = submission_file.replace('.submission-', '.receipt-')
                 with open(receipt_file, 'w') as w: w.write(receipt)
 
-                if not ctx.obj['IS_TEST']:
-                    update_original_xml_with_ega_accession(ega_obj_type, metadata_xmls, receipt_file)
+                if not ctx.obj['IS_TEST'] and action_note == 'ADD':
+                    submitted_items = get_submitted_items_from_receipt(receipt_file, ega_type, '')
+                    for xml in metadata_xmls:
+                        update_original_xml_with_ega_accession(ega_obj_type, xml, submitted_items)
 
                 click.echo('Succeeded with response:\n%s\n\n' % receipt, err=True)  # not error, just to output this to stderr
             else:

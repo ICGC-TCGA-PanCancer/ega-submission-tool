@@ -3,6 +3,7 @@ import click
 import util
 from prepare_xml import *
 from submit_xml import *
+from update_xml import *
 
 
 def initialize_workspace(ctx):
@@ -55,3 +56,16 @@ def submit(ctx, ega_type, source):
         click.echo('Unknown object type: %s' % ega_type, err=True)
         ctx.abort()
 
+
+def update(ctx, ega_type, source):
+    if ega_type == 'study':
+        update_study(ctx, source)
+    elif ega_type == 'sample':
+        update_sample(ctx, source)
+    elif ega_type == 'analysis':
+        update_analysis(ctx, source)
+    elif ega_type == 'dataset':
+        update_dataset(ctx, source)
+    else:
+        click.echo('Unknown object type: %s' % ega_type, err=True)
+        ctx.abort()
