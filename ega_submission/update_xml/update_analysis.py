@@ -32,9 +32,12 @@ def _do_submission(ctx, submission_obj, analyses_to_be_updated):
 
 
 def update_analysis(ctx, source):
-    if not (os.path.isdir(source) and os.path.exists(source)):
-        click.echo('Error: specified source is not a directory containing analysis XMLs', err=True)
-        ctx.abort()
+    pattern = re.compile('^analysis\.([^\.]+)\.xml$')
+    analyses_to_be_updated = []
+    batch_count = 0
+    fc_total = 0
+    fc_processed = 0
+    success_count = 0
 
     # parse all relavent submission receipts to identify items have been submitted before
     submitted_analysis = {}
@@ -44,42 +47,64 @@ def update_analysis(ctx, source):
 
         if fnmatch.fnmatch(filename, receipt_file_pattern):
             submitted_analysis.update(get_submitted_items_from_receipt(os.path.join(os.getcwd(), 'analysis', filename), 'ANALYSIS', ''))
-                
 
-    batch_count = 0
-    fc_total = 0
-    fc_processed = 0
-    success_count = 0
-    pattern = re.compile('^analysis\.([^\.]+)\.xml$')
-    analyses_to_be_updated = []
-
-    for f in os.listdir(source):
-        file_with_path = os.path.join(source, f)
-        if not os.path.isfile(file_with_path): continue
-
-        m = re.match(pattern, f)
+    if os.path.isfile(source) and source.endswith('.xml'):
+        # update one analysis
+        m = re.match(pattern, source.split("/")[-1])
         if m and m.group(1):
             analysis_alias = m.group(1)
         else:
             if ctx.obj['DEBUG']: click.echo('Ingore file does not match naming pattern: %s' % f, err=True)
-            continue
-
+            ctx.abort()
+            
         fc_total += 1
 
         if not analysis_alias in submitted_analysis.keys():
             click.echo('Warning: this xml file "%s" has not been submitted to EGA before, can not be updated.' % file_with_path, err=True)
-            continue
+            ctx.abort()
 
         analyses_to_be_updated.append(analysis_alias)
-        update_original_xml_with_ega_accession('analysis', file_with_path, submitted_analysis)
-
+        update_original_xml_with_ega_accession('analysis', source, submitted_analysis)
+        
         fc_processed += 1
 
-        if fc_processed % BATCH_SIZE == 0:  # one batch completed
-            submission_obj = prepare_submission(ctx, 'analysis', analyses_to_be_updated, 'MODIFY')
-            if _do_submission(ctx, submission_obj, analyses_to_be_updated): success_count += 1
-            batch_count += 1
-            analyses_to_be_updated = []
+        submission_obj = prepare_submission(ctx, 'analysis', analyses_to_be_updated, 'MODIFY')
+        if _do_submission(ctx, submission_obj, analyses_to_be_updated): success_count += 1
+        batch_count += 1
+        analyses_to_be_updated = []
+
+    elif os.path.isdir(source):
+        for f in os.listdir(source):
+            file_with_path = os.path.join(source, f)
+            if not os.path.isfile(file_with_path): continue
+
+            m = re.match(pattern, f)
+            if m and m.group(1):
+                analysis_alias = m.group(1)
+            else:
+                if ctx.obj['DEBUG']: click.echo('Ingore file does not match naming pattern: %s' % f, err=True)
+                continue
+
+            fc_total += 1
+
+            if not analysis_alias in submitted_analysis.keys():
+                click.echo('Warning: this xml file "%s" has not been submitted to EGA before, can not be updated.' % file_with_path, err=True)
+                continue
+
+            analyses_to_be_updated.append(analysis_alias)
+            update_original_xml_with_ega_accession('analysis', file_with_path, submitted_analysis)
+
+            fc_processed += 1
+
+            if fc_processed % BATCH_SIZE == 0:  # one batch completed
+                submission_obj = prepare_submission(ctx, 'analysis', analyses_to_be_updated, 'MODIFY')
+                if _do_submission(ctx, submission_obj, analyses_to_be_updated): success_count += 1
+                batch_count += 1
+                analyses_to_be_updated = []
+    
+    else:
+        click.echo('Error: specified source is not a directory containing analysis XMLs or a file have .xml extension - %s' % source, err=True)
+        ctx.abort()
 
 
     if analyses_to_be_updated:  # there are still some to be submitted
